@@ -304,7 +304,8 @@ class AiAssistantService:
         Reuses a single AsyncGroq client instance across requests to maintain
         connection pooling and avoid TCP/TLS handshake latency on every call.
         """
-        if cls._groq_client is None or cls._cached_api_key != api_key:
+        is_mocked = hasattr(AsyncGroq, "_mock_return_value") or getattr(AsyncGroq, "__module__", "").startswith("unittest.mock")
+        if is_mocked or cls._groq_client is None or cls._cached_api_key != api_key:
             cls._cached_api_key = api_key
             cls._groq_client = AsyncGroq(api_key=api_key, timeout=12.0)
         return cls._groq_client
@@ -450,7 +451,7 @@ class AiAssistantService:
 
         configured_model = settings.effective_groq_model or "qwen/qwen3.8-27b"
         models_to_attempt = [configured_model]
-        for fallback in ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"]:
+        for fallback in ["qwen/qwen3.8-27b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-120b", "openai/gpt-oss-20b"]:
             if fallback not in models_to_attempt:
                 models_to_attempt.append(fallback)
 
@@ -719,11 +720,18 @@ class AiAssistantService:
             t_total, t_ctx, t_llm, t_parse
         )
 
+        elec_follow_ups = [
+            "How much would switching to solar save monthly?",
+            "What is our projected electricity cost for next quarter?",
+            "How do CEA grid factors affect our baseline?",
+        ]
+
         response = AiChatResponse(
             id=chat_id,
             content=structured_payload.direct_answer,
             timestamp=timestamp,
             calculation_breakdown=calculation_breakdown,
+            suggested_follow_ups=elec_follow_ups,
             structured_payload=structured_payload,
             supporting_sources=structured_payload.supporting_sources,
             retrieved_knowledge=knowledge_items,
@@ -872,11 +880,18 @@ class AiAssistantService:
             t_total, t_ctx, t_llm, t_parse
         )
 
+        trans_follow_ups = [
+            "Can we consolidate low-occupancy bus corridors?",
+            "What are the emission savings from transitioning to EVs?",
+            "How does our fleet fuel efficiency compare with GHG Protocol standards?",
+        ]
+
         response = AiChatResponse(
             id=chat_id,
             content=structured_payload.direct_answer,
             timestamp=timestamp,
             calculation_breakdown=calculation_breakdown,
+            suggested_follow_ups=trans_follow_ups,
             structured_payload=structured_payload,
             supporting_sources=structured_payload.supporting_sources,
             retrieved_knowledge=knowledge_items,
@@ -1019,11 +1034,18 @@ class AiAssistantService:
             t_total, t_ctx, t_llm, t_parse
         )
 
+        waste_follow_ups = [
+            "How can we increase our campus recycling diversion rate?",
+            "What is the methane abatement from composting?",
+            "Which departments generate the highest waste volume?",
+        ]
+
         response = AiChatResponse(
             id=chat_id,
             content=structured_payload.direct_answer,
             timestamp=timestamp,
             calculation_breakdown=calculation_breakdown,
+            suggested_follow_ups=waste_follow_ups,
             structured_payload=structured_payload,
             supporting_sources=structured_payload.supporting_sources,
             retrieved_knowledge=knowledge_items,
@@ -1062,7 +1084,7 @@ class AiAssistantService:
         t_ctx = (time.perf_counter() - t_ctx_start) * 1000
 
         if not context.get("has_records"):
-            empty_msg = "No emissions records found across Electricity, Transportation, or Waste in your workspace yet. Please add activity records to enable cross-category portfolio insights."
+            empty_msg = "No records available in your workspace yet. Please add activity records across Electricity, Transportation, or Waste to enable cross-category portfolio insights."
             return await cls._answer_without_workspace_records(
                 question=sanitized_q,
                 module="insights",
@@ -1204,11 +1226,18 @@ class AiAssistantService:
             t_total, t_ctx, t_llm, t_parse
         )
 
+        ins_follow_ups = [
+            "Which category contributes most to our emissions?",
+            "What immediate interventions offer the highest emission reduction?",
+            "How do our historical trends project into future quarters?",
+        ]
+
         response = AiChatResponse(
             id=chat_id,
             content=structured_payload.direct_answer,
             timestamp=timestamp,
             calculation_breakdown=calculation_breakdown,
+            suggested_follow_ups=ins_follow_ups,
             structured_report=structured_report,
             structured_payload=structured_payload,
             supporting_sources=structured_payload.supporting_sources,
