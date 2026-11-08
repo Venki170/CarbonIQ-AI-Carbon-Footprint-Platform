@@ -3,31 +3,26 @@
  */
 
 /**
- * Validates whether an email address has a valid frontend format.
- * 
- * Rules:
- * - Rejects empty input or non-string values.
- * - Trims accidental leading and trailing whitespace before validation.
- * - Requires a local part containing permitted characters (alphanumeric, dots, plus signs, underscores, hyphens).
- * - Requires an '@' separator.
- * - Requires a valid domain with a domain extension (at least 2 alphabetic characters).
- * - Rejects missing domains, missing TLDs, and addresses with whitespace.
+ * Checks a practical email format for frontend feedback.
+ * Trims surrounding whitespace; supports plus tags and hyphenated domains.
+ * Rejects empty values, malformed dot placement, and invalid domain labels.
+ * This is a format check, not proof that the mailbox exists.
  */
 export function isValidEmail(email: string | null | undefined): boolean {
-  if (!email || typeof email !== 'string') {
-    return false
-  }
+  if (typeof email !== 'string') return false
 
   const trimmed = email.trim()
-  if (!trimmed) {
-    return false
-  }
+  if (!trimmed || trimmed.length > 254) return false
 
-  // Practical frontend email validation pattern:
-  // - Local part: [a-zA-Z0-9._%+-]+
-  // - Domain name: [a-zA-Z0-9]+([.-][a-zA-Z0-9]+)*
-  // - Domain extension: \.[a-zA-Z]{2,}
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$/
+  const parts = trimmed.split('@')
+  if (parts.length !== 2) return false
+  const [local, domain] = parts
+  if (!local || local.length > 64 || !domain) return false
+  if (!/^[a-zA-Z0-9_%+-]+(?:[.][a-zA-Z0-9_%+-]+)*$/.test(local)) return false
 
-  return emailRegex.test(trimmed)
+  const labels = domain.split('.')
+  if (labels.length < 2 || !/^[a-zA-Z]{2,}$/.test(labels[labels.length - 1])) return false
+  return labels.every(label =>
+    label.length <= 63 && /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(label)
+  )
 }
